@@ -32,6 +32,7 @@ import com.matteo.cozyplans.ui.theme.CozyPlansTheme
 fun CozyPlansApp() {
     var currentPage by remember { mutableStateOf(AppPage.WELCOME) }
     var newTaskTitle by remember { mutableStateOf("") }
+    var newTaskDueAtMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     val tasks = remember { mutableStateListOf<Task>() }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -82,11 +83,14 @@ fun CozyPlansApp() {
                         AppPage.CREATE -> CreateTaskScreen(
                             value = newTaskTitle,
                             onValueChange = { newTaskTitle = it },
+                            dueAtMillis = newTaskDueAtMillis,
+                            onDueAtChange = { newTaskDueAtMillis = it },
                             onAddTask = {
                                 val trimmed = newTaskTitle.trim()
                                 if (trimmed.isNotEmpty()) {
-                                    tasks.add(Task(title = trimmed))
+                                    tasks.add(Task(title = trimmed, dueAtMillis = newTaskDueAtMillis))
                                     newTaskTitle = ""
+                                    newTaskDueAtMillis = System.currentTimeMillis()
                                     currentPage = AppPage.LIST
                                 }
                             }
@@ -94,8 +98,11 @@ fun CozyPlansApp() {
 
                         AppPage.LIST -> TaskListScreen(
                             tasks = tasks,
-                            onUpdateTask = { index, updatedTitle ->
-                                tasks[index] = tasks[index].copy(title = updatedTitle)
+                            onUpdateTask = { index, updatedTitle, updatedDueAtMillis ->
+                                tasks[index] = tasks[index].copy(
+                                    title = updatedTitle,
+                                    dueAtMillis = updatedDueAtMillis
+                                )
                             },
                             onToggleTaskDone = { index ->
                                 tasks[index] = tasks[index].copy(isDone = !tasks[index].isDone)
