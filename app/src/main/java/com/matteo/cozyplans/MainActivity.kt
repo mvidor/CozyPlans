@@ -8,35 +8,35 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.matteo.cozyplans.ui.theme.CozyPlansTheme
 
 class MainActivity : ComponentActivity() {
@@ -45,28 +45,85 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             CozyPlansTheme {
-                var showTasks by remember { mutableStateOf(false) }
-                if (showTasks) {
-                    Scaffold(
-                        modifier = Modifier.fillMaxSize(),
-                        floatingActionButton = {
-                            FloatingActionButton(onClick = { }) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Ajouter une tâche"
-                                )
-                            }
-                        }
-                    ) { innerPadding ->
-                        TodoHome(
-                            modifier = Modifier.padding(innerPadding)
-                        )
-                    }
-                } else {
-                    WelcomeScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        onContinue = { showTasks = true }
+                CozyPlansApp()
+            }
+        }
+    }
+}
+
+private enum class AppPage {
+    WELCOME,
+    CREATE,
+    LIST
+}
+
+@Composable
+private fun CozyPlansApp() {
+    var currentPage by remember { mutableStateOf(AppPage.WELCOME) }
+    var newTaskTitle by remember { mutableStateOf("") }
+    val tasks = remember { mutableStateListOf<String>() }
+
+    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        when (currentPage) {
+            AppPage.WELCOME -> WelcomeScreen(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                onContinue = { currentPage = AppPage.CREATE }
+            )
+
+            AppPage.CREATE, AppPage.LIST -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = "CozyPlans",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { currentPage = AppPage.CREATE },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Creer")
+                        }
+                        Button(
+                            onClick = { currentPage = AppPage.LIST },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Lister")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    when (currentPage) {
+                        AppPage.CREATE -> CreateTaskPage(
+                            value = newTaskTitle,
+                            onValueChange = { newTaskTitle = it },
+                            onAddTask = {
+                                val trimmed = newTaskTitle.trim()
+                                if (trimmed.isNotEmpty()) {
+                                    tasks.add(trimmed)
+                                    newTaskTitle = ""
+                                    currentPage = AppPage.LIST
+                                }
+                            }
+                        )
+
+                        AppPage.LIST -> TaskListPage(tasks = tasks)
+                        AppPage.WELCOME -> Unit
+                    }
                 }
             }
         }
@@ -74,37 +131,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun TodoHome(modifier: Modifier = Modifier) {
-    val taskName = remember { mutableStateOf("") }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(12.dp))
-        Image(
-            painter = painterResource(id = R.drawable.logo),
-            contentDescription = "Logo CozyPlans",
-            modifier = Modifier.size(140.dp)
-        )
-        Spacer(modifier = Modifier.height(28.dp))
-        OutlinedTextField(
-            value = taskName.value,
-            onValueChange = { taskName.value = it },
-            label = { Text("Nom de la tâche") },
-            singleLine = true,
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-        )
-    }
-}
-
-@Composable
-fun WelcomeScreen(
+private fun WelcomeScreen(
     modifier: Modifier = Modifier,
     onContinue: () -> Unit
 ) {
@@ -112,10 +139,9 @@ fun WelcomeScreen(
         modifier = modifier
             .clickable { onContinue() }
             .padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.Top,
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
         Image(
             painter = painterResource(id = R.drawable.logo),
             contentDescription = "Logo CozyPlans",
@@ -124,11 +150,10 @@ fun WelcomeScreen(
         )
         Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "BIENVENUE\nSUR\nCOZYPLANS",
+            text = "CozyPlans",
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Black,
             fontSize = 40.sp,
-            lineHeight = 44.sp,
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(28.dp))
@@ -140,10 +165,63 @@ fun WelcomeScreen(
     }
 }
 
+@Composable
+private fun CreateTaskPage(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onAddTask: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = "Creer une nouvelle tache",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Nom de la tache") },
+            singleLine = true
+        )
+
+        Button(onClick = onAddTask) {
+            Text("Ajouter la tache")
+        }
+    }
+}
+
+@Composable
+private fun TaskListPage(tasks: List<String>) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = "Lister toutes les taches",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        if (tasks.isEmpty()) {
+            Text("Aucune tache pour le moment.")
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                itemsIndexed(tasks) { index, task ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "${index + 1}. $task",
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+private fun CozyPlansAppPreview() {
     CozyPlansTheme {
-        WelcomeScreen(onContinue = {})
+        CozyPlansApp()
     }
 }
