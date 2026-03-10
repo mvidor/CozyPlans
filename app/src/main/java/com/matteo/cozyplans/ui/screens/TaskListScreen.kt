@@ -27,6 +27,12 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.matteo.cozyplans.model.Task
 
+private enum class TaskFilter {
+    ALL,
+    TODO,
+    DONE
+}
+
 @Composable
 fun TaskListScreen(
     tasks: List<Task>,
@@ -35,6 +41,16 @@ fun TaskListScreen(
 ) {
     var editingIndex by remember { mutableStateOf<Int?>(null) }
     var editingValue by remember { mutableStateOf("") }
+    var selectedFilter by remember { mutableStateOf(TaskFilter.ALL) }
+
+    val filteredTasks = tasks.mapIndexedNotNull { index, task ->
+        val include = when (selectedFilter) {
+            TaskFilter.ALL -> true
+            TaskFilter.TODO -> !task.isDone
+            TaskFilter.DONE -> task.isDone
+        }
+        if (include) index to task else null
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -43,11 +59,30 @@ fun TaskListScreen(
             fontWeight = FontWeight.SemiBold
         )
 
-        if (tasks.isEmpty()) {
-            Text("Aucune tache pour le moment.")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { selectedFilter = TaskFilter.ALL }) {
+                Text("Toutes")
+            }
+            Button(onClick = { selectedFilter = TaskFilter.TODO }) {
+                Text("A faire")
+            }
+            Button(onClick = { selectedFilter = TaskFilter.DONE }) {
+                Text("Realisees")
+            }
+        }
+
+        if (filteredTasks.isEmpty()) {
+            val emptyMessage = if (tasks.isEmpty()) {
+                "Aucune tache pour le moment."
+            } else {
+                "Aucune tache pour ce filtre."
+            }
+            Text(emptyMessage)
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(tasks) { index, task ->
+                itemsIndexed(filteredTasks) { _, item ->
+                    val index = item.first
+                    val task = item.second
                     val taskCardColor =
                         if (task.isDone) Color(0xFF1E3A8A) else MaterialTheme.colorScheme.surface
                     val taskTextColor =
