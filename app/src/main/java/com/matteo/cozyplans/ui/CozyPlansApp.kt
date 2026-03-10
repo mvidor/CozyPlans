@@ -96,6 +96,9 @@ fun CozyPlansApp() {
                             tasks = tasks,
                             onUpdateTask = { index, updatedTitle ->
                                 tasks[index] = tasks[index].copy(title = updatedTitle)
+                            },
+                            onToggleTaskDone = { index ->
+                                tasks[index] = tasks[index].copy(isDone = !tasks[index].isDone)
                             }
                         )
 

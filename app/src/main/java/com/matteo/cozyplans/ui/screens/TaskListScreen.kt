@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -20,14 +21,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.matteo.cozyplans.model.Task
 
 @Composable
 fun TaskListScreen(
     tasks: List<Task>,
-    onUpdateTask: (index: Int, updatedTitle: String) -> Unit
+    onUpdateTask: (index: Int, updatedTitle: String) -> Unit,
+    onToggleTaskDone: (index: Int) -> Unit
 ) {
     var editingIndex by remember { mutableStateOf<Int?>(null) }
     var editingValue by remember { mutableStateOf("") }
@@ -44,11 +48,21 @@ fun TaskListScreen(
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 itemsIndexed(tasks) { index, task ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    val taskCardColor =
+                        if (task.isDone) Color(0xFF1E3A8A) else MaterialTheme.colorScheme.surface
+                    val taskTextColor =
+                        if (task.isDone) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = taskCardColor)
+                    ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 text = "${index + 1}. ${task.title}",
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
+                                color = taskTextColor
                             )
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -88,13 +102,19 @@ fun TaskListScreen(
                                     }
                                 }
                             } else {
-                                Button(
-                                    onClick = {
-                                        editingIndex = index
-                                        editingValue = task.title
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Button(
+                                        onClick = {
+                                            editingIndex = index
+                                            editingValue = task.title
+                                        }
+                                    ) {
+                                        Text("Modifier")
                                     }
-                                ) {
-                                    Text("Modifier")
+
+                                    Button(onClick = { onToggleTaskDone(index) }) {
+                                        Text(if (task.isDone) "Annuler realisee" else "Marquer realisee")
+                                    }
                                 }
                             }
                         }
