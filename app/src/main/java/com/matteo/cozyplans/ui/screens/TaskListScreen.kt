@@ -60,7 +60,8 @@ private enum class TaskFilter {
 fun TaskListScreen(
     tasks: List<Task>,
     onUpdateTask: (index: Int, updatedTitle: String, updatedDueAtMillis: Long) -> Unit,
-    onToggleTaskDone: (index: Int) -> Unit
+    onToggleTaskDone: (index: Int) -> Unit,
+    onPurgeCompleted: () -> Unit
 ) {
     val context = LocalContext.current
     val zoneId = ZoneId.systemDefault()
@@ -82,6 +83,7 @@ fun TaskListScreen(
         }
         if (include) index to task else null
     }
+    val completedCount = tasks.count { it.isDone }
     val nowMillis = System.currentTimeMillis()
     val overdueCount = tasks.count { !it.isDone && it.dueAtMillis < nowMillis }
 
@@ -124,6 +126,11 @@ fun TaskListScreen(
                 Button(onClick = { selectedFilter = TaskFilter.ALL }) { Text("Toutes") }
                 Button(onClick = { selectedFilter = TaskFilter.TODO }) { Text("A faire") }
                 Button(onClick = { selectedFilter = TaskFilter.DONE }) { Text("Realisees") }
+            }
+            if (completedCount > 0) {
+                Button(onClick = onPurgeCompleted) {
+                    Text("Effacer les taches effectuees ($completedCount)")
+                }
             }
 
             if (filteredTasks.isEmpty()) {

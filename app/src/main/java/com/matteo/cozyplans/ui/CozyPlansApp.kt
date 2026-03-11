@@ -106,6 +106,9 @@ fun CozyPlansApp() {
                             },
                             onToggleTaskDone = { index ->
                                 tasks[index] = tasks[index].copy(isDone = !tasks[index].isDone)
+                            },
+                            onPurgeCompleted = {
+                                tasks.removeAll { it.isDone }
                             }
                         )
 
