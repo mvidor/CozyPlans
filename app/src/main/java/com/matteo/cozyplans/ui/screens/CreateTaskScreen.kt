@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.matteo.cozyplans.model.TaskRecurrence
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -28,6 +29,8 @@ fun CreateTaskScreen(
     onValueChange: (String) -> Unit,
     dueAtMillis: Long,
     onDueAtChange: (Long) -> Unit,
+    recurrence: TaskRecurrence,
+    onRecurrenceChange: (TaskRecurrence) -> Unit,
     onAddTask: () -> Unit
 ) {
     val context = LocalContext.current
@@ -90,6 +93,24 @@ fun CreateTaskScreen(
             }) {
                 Text("Choisir heure")
             }
+        }
+
+        Text(
+            text = "Periodicite: ${
+                when (recurrence) {
+                    TaskRecurrence.NONE -> "Aucune"
+                    TaskRecurrence.DAILY -> "Quotidienne"
+                    TaskRecurrence.WEEKLY -> "Hebdomadaire"
+                    TaskRecurrence.MONTHLY -> "Mensuelle"
+                }
+            }",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { onRecurrenceChange(TaskRecurrence.NONE) }) { Text("Aucune") }
+            Button(onClick = { onRecurrenceChange(TaskRecurrence.DAILY) }) { Text("Quot.") }
+            Button(onClick = { onRecurrenceChange(TaskRecurrence.WEEKLY) }) { Text("Hebdo") }
+            Button(onClick = { onRecurrenceChange(TaskRecurrence.MONTHLY) }) { Text("Mens.") }
         }
 
         Button(onClick = onAddTask) {

@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.matteo.cozyplans.model.Task
+import com.matteo.cozyplans.model.TaskRecurrence
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -59,7 +60,7 @@ private enum class TaskFilter {
 @Composable
 fun TaskListScreen(
     tasks: List<Task>,
-    onUpdateTask: (index: Int, updatedTitle: String, updatedDueAtMillis: Long) -> Unit,
+    onUpdateTask: (index: Int, updatedTitle: String, updatedDueAtMillis: Long, updatedRecurrence: TaskRecurrence) -> Unit,
     onToggleTaskDone: (index: Int) -> Unit,
     onPurgeCompleted: () -> Unit
 ) {
@@ -70,6 +71,7 @@ fun TaskListScreen(
     var editingIndex by remember { mutableStateOf<Int?>(null) }
     var editingValue by remember { mutableStateOf("") }
     var editingDueAtMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    var editingRecurrence by remember { mutableStateOf(TaskRecurrence.NONE) }
     var selectedFilter by remember { mutableStateOf(TaskFilter.ALL) }
     var meteorTrigger by remember { mutableIntStateOf(0) }
     var showMeteor by remember { mutableStateOf(false) }
@@ -227,13 +229,31 @@ fun TaskListScreen(
                                         }
                                     }
 
+                                    Text(
+                                        text = "Periodicite: ${
+                                            when (editingRecurrence) {
+                                                TaskRecurrence.NONE -> "Aucune"
+                                                TaskRecurrence.DAILY -> "Quotidienne"
+                                                TaskRecurrence.WEEKLY -> "Hebdomadaire"
+                                                TaskRecurrence.MONTHLY -> "Mensuelle"
+                                            }
+                                        }",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Button(onClick = { editingRecurrence = TaskRecurrence.NONE }) { Text("Aucune") }
+                                        Button(onClick = { editingRecurrence = TaskRecurrence.DAILY }) { Text("Quot.") }
+                                        Button(onClick = { editingRecurrence = TaskRecurrence.WEEKLY }) { Text("Hebdo") }
+                                        Button(onClick = { editingRecurrence = TaskRecurrence.MONTHLY }) { Text("Mens.") }
+                                    }
+
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Button(onClick = {
                                             val updated = editingValue.trim()
                                             if (updated.isNotEmpty()) {
-                                                onUpdateTask(index, updated, editingDueAtMillis)
+                                                onUpdateTask(index, updated, editingDueAtMillis, editingRecurrence)
                                                 editingIndex = null
                                                 editingValue = ""
                                             }
@@ -254,6 +274,7 @@ fun TaskListScreen(
                                             editingIndex = index
                                             editingValue = task.title
                                             editingDueAtMillis = task.dueAtMillis
+                                            editingRecurrence = task.recurrence
                                         }) {
                                             Text("Modifier")
                                         }
@@ -273,6 +294,17 @@ fun TaskListScreen(
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "Pour le ${taskDueDateTime.format(formatter)}",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.End,
+                                    color = taskTextColor
+                                )
+                                Text(
+                                    text = when (task.recurrence) {
+                                        TaskRecurrence.NONE -> "Periodicite: aucune"
+                                        TaskRecurrence.DAILY -> "Periodicite: quotidienne"
+                                        TaskRecurrence.WEEKLY -> "Periodicite: hebdomadaire"
+                                        TaskRecurrence.MONTHLY -> "Periodicite: mensuelle"
+                                    },
                                     modifier = Modifier.fillMaxWidth(),
                                     textAlign = TextAlign.End,
                                     color = taskTextColor

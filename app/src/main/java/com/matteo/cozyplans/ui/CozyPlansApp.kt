@@ -23,16 +23,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.matteo.cozyplans.model.Task
+import com.matteo.cozyplans.model.TaskRecurrence
 import com.matteo.cozyplans.ui.screens.CreateTaskScreen
 import com.matteo.cozyplans.ui.screens.TaskListScreen
 import com.matteo.cozyplans.ui.screens.WelcomeScreen
 import com.matteo.cozyplans.ui.theme.CozyPlansTheme
+import java.time.Instant
+import java.time.ZoneId
 
 @Composable
 fun CozyPlansApp() {
     var currentPage by remember { mutableStateOf(AppPage.WELCOME) }
     var newTaskTitle by remember { mutableStateOf("") }
     var newTaskDueAtMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    var newTaskRecurrence by remember { mutableStateOf(TaskRecurrence.NONE) }
     val tasks = remember { mutableStateListOf<Task>() }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -85,12 +89,21 @@ fun CozyPlansApp() {
                             onValueChange = { newTaskTitle = it },
                             dueAtMillis = newTaskDueAtMillis,
                             onDueAtChange = { newTaskDueAtMillis = it },
+                            recurrence = newTaskRecurrence,
+                            onRecurrenceChange = { newTaskRecurrence = it },
                             onAddTask = {
                                 val trimmed = newTaskTitle.trim()
                                 if (trimmed.isNotEmpty()) {
-                                    tasks.add(Task(title = trimmed, dueAtMillis = newTaskDueAtMillis))
+                                    tasks.add(
+                                        Task(
+                                            title = trimmed,
+                                            dueAtMillis = newTaskDueAtMillis,
+                                            recurrence = newTaskRecurrence
+                                        )
+                                    )
                                     newTaskTitle = ""
                                     newTaskDueAtMillis = System.currentTimeMillis()
+                                    newTaskRecurrence = TaskRecurrence.NONE
                                     currentPage = AppPage.LIST
                                 }
                             }
@@ -98,14 +111,34 @@ fun CozyPlansApp() {
 
                         AppPage.LIST -> TaskListScreen(
                             tasks = tasks,
-                            onUpdateTask = { index, updatedTitle, updatedDueAtMillis ->
+                            onUpdateTask = { index, updatedTitle, updatedDueAtMillis, updatedRecurrence ->
                                 tasks[index] = tasks[index].copy(
                                     title = updatedTitle,
-                                    dueAtMillis = updatedDueAtMillis
+                                    dueAtMillis = updatedDueAtMillis,
+                                    recurrence = updatedRecurrence
                                 )
                             },
                             onToggleTaskDone = { index ->
-                                tasks[index] = tasks[index].copy(isDone = !tasks[index].isDone)
+                                val task = tasks[index]
+                                val willBeDone = !task.isDone
+                                tasks[index] = task.copy(isDone = willBeDone)
+
+                                if (willBeDone && task.recurrence != TaskRecurrence.NONE) {
+                                    val zoneId = ZoneId.systemDefault()
+                                    val currentDue = Instant.ofEpochMilli(task.dueAtMillis).atZone(zoneId).toLocalDateTime()
+                                    val nextDue = when (task.recurrence) {
+                                        TaskRecurrence.DAILY -> currentDue.plusDays(1)
+                                        TaskRecurrence.WEEKLY -> currentDue.plusWeeks(1)
+                                        TaskRecurrence.MONTHLY -> currentDue.plusMonths(1)
+                                        TaskRecurrence.NONE -> currentDue
+                                    }
+                                    tasks.add(
+                                        task.copy(
+                                            isDone = false,
+                                            dueAtMillis = nextDue.atZone(zoneId).toInstant().toEpochMilli()
+                                        )
+                                    )
+                                }
                             },
                             onPurgeCompleted = {
                                 tasks.removeAll { it.isDone }
