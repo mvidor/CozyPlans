@@ -31,6 +31,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -54,6 +55,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -101,6 +103,7 @@ fun TaskListScreen(
     var selectedFilter by remember { mutableStateOf(TaskFilter.ALL) }
     var compactMode by remember { mutableStateOf(true) }
     val expandedTasks = remember { mutableStateMapOf<Int, Boolean>() }
+    var pendingDeleteIndex by remember { mutableStateOf<Int?>(null) }
     var meteorTrigger by remember { mutableIntStateOf(0) }
     var showMeteor by remember { mutableStateOf(false) }
     val meteorProgress = remember { Animatable(0f) }
@@ -571,8 +574,13 @@ fun TaskListScreen(
                                             Text(if (task.isDone) "Annuler realisee" else "Marquer realisee")
                                         }
 
-                                        TextButton(onClick = { onDeleteTask(index) }) {
-                                            Text("X")
+                                        TextButton(onClick = { pendingDeleteIndex = index }) {
+                                            Text(
+                                                text = "X",
+                                                fontWeight = FontWeight.Black,
+                                                fontSize = 20.sp,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
                                         }
                                     }
                                 }
@@ -720,6 +728,30 @@ fun TaskListScreen(
                     }
                 }
             }
+        }
+
+        if (pendingDeleteIndex != null) {
+            AlertDialog(
+                onDismissRequest = { pendingDeleteIndex = null },
+                title = { Text("Supprimer la tache ?") },
+                text = { Text("Cette action est definitive.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val idx = pendingDeleteIndex
+                        if (idx != null) {
+                            onDeleteTask(idx)
+                        }
+                        pendingDeleteIndex = null
+                    }) {
+                        Text("Oui, supprimer", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingDeleteIndex = null }) {
+                        Text("Annuler")
+                    }
+                }
+            )
         }
     }
 @Composable
