@@ -203,7 +203,7 @@ fun CreateTaskScreen(
         }
 
         Text(
-            text = "Periodicite: ${recurrenceLabel(recurrence, recurrenceInterval)}",
+            text = "Periodicite: ${createRecurrenceLabel(recurrence, recurrenceInterval)}",
             style = MaterialTheme.typography.bodyMedium
         )
         Row(
@@ -354,7 +354,7 @@ private fun RecurrenceButton(
     }
 }
 
-private fun recurrenceLabel(
+private fun createRecurrenceLabel(
     recurrence: TaskRecurrence,
     interval: Int
 ): String {
