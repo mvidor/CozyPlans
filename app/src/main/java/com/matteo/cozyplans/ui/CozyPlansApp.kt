@@ -45,6 +45,8 @@ import java.time.ZoneId
 fun CozyPlansApp() {
     var currentPage by remember { mutableStateOf(AppPage.WELCOME) }
     var newTaskTitle by remember { mutableStateOf("") }
+    var newTaskDescription by remember { mutableStateOf("") }
+    var newTaskPhotoUri by remember { mutableStateOf<String?>(null) }
     var newTaskDueAtMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     var newTaskRecurrence by remember { mutableStateOf(TaskRecurrence.NONE) }
     var newTaskRecurrenceInterval by remember { mutableStateOf(1) }
@@ -141,6 +143,10 @@ fun CozyPlansApp() {
                                     AppPage.CREATE -> CreateTaskScreen(
                                         value = newTaskTitle,
                                         onValueChange = { newTaskTitle = it },
+                                        description = newTaskDescription,
+                                        onDescriptionChange = { newTaskDescription = it },
+                                        photoUri = newTaskPhotoUri,
+                                        onPhotoUriChange = { newTaskPhotoUri = it },
                                         dueAtMillis = newTaskDueAtMillis,
                                         onDueAtChange = { newTaskDueAtMillis = it },
                                         recurrence = newTaskRecurrence,
@@ -155,6 +161,8 @@ fun CozyPlansApp() {
                                                 tasks.add(
                                                     Task(
                                                         title = trimmed,
+                                                        description = newTaskDescription.trim(),
+                                                        photoUri = newTaskPhotoUri,
                                                         dueAtMillis = newTaskDueAtMillis,
                                                         recurrence = newTaskRecurrence,
                                                         recurrenceInterval = newTaskRecurrenceInterval,
@@ -162,6 +170,8 @@ fun CozyPlansApp() {
                                                     )
                                                 )
                                                 newTaskTitle = ""
+                                                newTaskDescription = ""
+                                                newTaskPhotoUri = null
                                                 newTaskDueAtMillis = System.currentTimeMillis()
                                                 newTaskRecurrence = TaskRecurrence.NONE
                                                 newTaskRecurrenceInterval = 1
@@ -173,9 +183,11 @@ fun CozyPlansApp() {
 
                                     AppPage.LIST -> TaskListScreen(
                                         tasks = tasks,
-                                        onUpdateTask = { index, updatedTitle, updatedDueAtMillis, updatedRecurrence, updatedRecurrenceInterval, updatedPriority ->
+                                        onUpdateTask = { index, updatedTitle, updatedDescription, updatedPhotoUri, updatedDueAtMillis, updatedRecurrence, updatedRecurrenceInterval, updatedPriority ->
                                             tasks[index] = tasks[index].copy(
                                                 title = updatedTitle,
+                                                description = updatedDescription,
+                                                photoUri = updatedPhotoUri,
                                                 dueAtMillis = updatedDueAtMillis,
                                                 recurrence = updatedRecurrence,
                                                 recurrenceInterval = updatedRecurrenceInterval,
