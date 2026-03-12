@@ -1,5 +1,6 @@
 package com.matteo.cozyplans.ui
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +21,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -27,9 +29,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.matteo.cozyplans.data.local.TaskStorage
 import com.matteo.cozyplans.model.Task
 import com.matteo.cozyplans.model.TaskPriority
 import com.matteo.cozyplans.model.TaskRecurrence
@@ -54,7 +58,39 @@ fun CozyPlansApp() {
     var rewardPoints by remember { mutableStateOf(0) }
     var completedTasksCount by remember { mutableStateOf(0) }
     var lastRewardMessage by remember { mutableStateOf("Termine une tache pour gagner des points") }
+    var didLoadPersistedState by remember { mutableStateOf(false) }
     val tasks = remember { mutableStateListOf<Task>() }
+    val context = LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences("cozyplans_local_store", Context.MODE_PRIVATE)
+    }
+
+    LaunchedEffect(Unit) {
+        val persisted = TaskStorage.load(prefs)
+        tasks.clear()
+        tasks.addAll(persisted.tasks)
+        rewardPoints = persisted.rewardPoints
+        completedTasksCount = persisted.completedTasksCount
+        lastRewardMessage = persisted.lastRewardMessage
+        didLoadPersistedState = true
+    }
+
+    LaunchedEffect(
+        didLoadPersistedState,
+        tasks.toList(),
+        rewardPoints,
+        completedTasksCount,
+        lastRewardMessage
+    ) {
+        if (!didLoadPersistedState) return@LaunchedEffect
+        TaskStorage.save(
+            prefs = prefs,
+            tasks = tasks.toList(),
+            rewardPoints = rewardPoints,
+            completedTasksCount = completedTasksCount,
+            lastRewardMessage = lastRewardMessage
+        )
+    }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(

@@ -2,6 +2,7 @@ package com.matteo.cozyplans.ui.screens
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.height
@@ -64,8 +65,18 @@ fun CreateTaskScreen(
     val zoneId = ZoneId.systemDefault()
     val selectedDateTime = Instant.ofEpochMilli(dueAtMillis).atZone(zoneId).toLocalDateTime()
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) {
+                // Ignore devices/providers that do not support persistable permissions.
+            }
+        }
         onPhotoUriChange(uri?.toString())
     }
 
@@ -111,7 +122,7 @@ fun CreateTaskScreen(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AssistChip(
-                        onClick = { photoPickerLauncher.launch("image/*") },
+                        onClick = { photoPickerLauncher.launch(arrayOf("image/*")) },
                         label = { Text(if (photoUri == null) "Joindre une photo" else "Changer photo") }
                     )
                     if (photoUri != null) {

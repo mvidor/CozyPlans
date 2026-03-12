@@ -2,6 +2,7 @@ package com.matteo.cozyplans.ui.screens
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
@@ -103,8 +104,18 @@ fun TaskListScreen(
     var showMeteor by remember { mutableStateOf(false) }
     val meteorProgress = remember { Animatable(0f) }
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) {
+                // Ignore devices/providers that do not support persistable permissions.
+            }
+        }
         editingPhotoUri = uri?.toString()
     }
 
@@ -357,7 +368,7 @@ fun TaskListScreen(
                                     )
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         AssistChip(
-                                            onClick = { photoPickerLauncher.launch("image/*") },
+                                            onClick = { photoPickerLauncher.launch(arrayOf("image/*")) },
                                             label = { Text(if (editingPhotoUri == null) "Joindre photo" else "Changer photo") }
                                         )
                                         if (editingPhotoUri != null) {
