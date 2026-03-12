@@ -63,6 +63,9 @@ private enum class TaskFilter {
 @Composable
 fun TaskListScreen(
     tasks: List<Task>,
+    rewardPoints: Int,
+    completedTasksCount: Int,
+    lastRewardMessage: String,
     onUpdateTask: (index: Int, updatedTitle: String, updatedDueAtMillis: Long, updatedRecurrence: TaskRecurrence, updatedRecurrenceInterval: Int, updatedPriority: TaskPriority) -> Unit,
     onToggleTaskDone: (index: Int) -> Unit,
     onPurgeCompleted: () -> Unit
@@ -104,6 +107,8 @@ fun TaskListScreen(
     val completedCount = tasks.count { it.isDone }
     val nowMillis = System.currentTimeMillis()
     val overdueCount = tasks.count { !it.isDone && it.dueAtMillis < nowMillis }
+    val rewardLevel = (rewardPoints / 100) + 1
+    val pointsInCurrentLevel = rewardPoints % 100
 
     LaunchedEffect(meteorTrigger) {
         if (meteorTrigger > 0) {
@@ -124,6 +129,36 @@ fun TaskListScreen(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Recompenses",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = "Niveau $rewardLevel  |  $rewardPoints points",
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = "Progression: $pointsInCurrentLevel/100",
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = "Taches validees: $completedTasksCount",
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = lastRewardMessage,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
 
             if (overdueCount > 0) {
                 Card(
