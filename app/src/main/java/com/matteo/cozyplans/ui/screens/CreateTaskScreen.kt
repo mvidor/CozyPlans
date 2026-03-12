@@ -2,6 +2,9 @@ package com.matteo.cozyplans.ui.screens
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
@@ -24,9 +28,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.matteo.cozyplans.model.TaskPriority
 import com.matteo.cozyplans.model.TaskRecurrence
 import java.time.Instant
@@ -40,6 +46,10 @@ import java.time.format.DateTimeFormatter
 fun CreateTaskScreen(
     value: String,
     onValueChange: (String) -> Unit,
+    description: String,
+    onDescriptionChange: (String) -> Unit,
+    photoUri: String?,
+    onPhotoUriChange: (String?) -> Unit,
     dueAtMillis: Long,
     onDueAtChange: (Long) -> Unit,
     recurrence: TaskRecurrence,
@@ -53,6 +63,11 @@ fun CreateTaskScreen(
     val context = LocalContext.current
     val zoneId = ZoneId.systemDefault()
     val selectedDateTime = Instant.ofEpochMilli(dueAtMillis).atZone(zoneId).toLocalDateTime()
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        onPhotoUriChange(uri?.toString())
+    }
 
     Column(
         modifier = Modifier
@@ -84,6 +99,38 @@ fun CreateTaskScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp)
                 )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = onDescriptionChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Description") },
+                    minLines = 3,
+                    maxLines = 5,
+                    shape = RoundedCornerShape(14.dp)
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AssistChip(
+                        onClick = { photoPickerLauncher.launch("image/*") },
+                        label = { Text(if (photoUri == null) "Joindre une photo" else "Changer photo") }
+                    )
+                    if (photoUri != null) {
+                        AssistChip(
+                            onClick = { onPhotoUriChange(null) },
+                            label = { Text("Retirer") }
+                        )
+                    }
+                }
+                if (photoUri != null) {
+                    AsyncImage(
+                        model = photoUri,
+                        contentDescription = "Photo de la tache",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
 
                 Text(
                     text = "Echeance: ${selectedDateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))}",

@@ -2,9 +2,12 @@ package com.matteo.cozyplans.ui.screens
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +28,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -45,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,6 +69,7 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import coil.compose.AsyncImage
 
 private enum class TaskFilter {
     ALL,
@@ -73,7 +80,7 @@ private enum class TaskFilter {
 @Composable
 fun TaskListScreen(
     tasks: List<Task>,
-    onUpdateTask: (index: Int, updatedTitle: String, updatedDueAtMillis: Long, updatedRecurrence: TaskRecurrence, updatedRecurrenceInterval: Int, updatedPriority: TaskPriority) -> Unit,
+    onUpdateTask: (index: Int, updatedTitle: String, updatedDescription: String, updatedPhotoUri: String?, updatedDueAtMillis: Long, updatedRecurrence: TaskRecurrence, updatedRecurrenceInterval: Int, updatedPriority: TaskPriority) -> Unit,
     onToggleTaskDone: (index: Int) -> Unit,
     onPurgeCompleted: () -> Unit
 ) {
@@ -83,6 +90,8 @@ fun TaskListScreen(
 
     var editingIndex by remember { mutableStateOf<Int?>(null) }
     var editingValue by remember { mutableStateOf("") }
+    var editingDescription by remember { mutableStateOf("") }
+    var editingPhotoUri by remember { mutableStateOf<String?>(null) }
     var editingDueAtMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     var editingRecurrence by remember { mutableStateOf(TaskRecurrence.NONE) }
     var editingRecurrenceInterval by remember { mutableIntStateOf(1) }
@@ -93,6 +102,11 @@ fun TaskListScreen(
     var meteorTrigger by remember { mutableIntStateOf(0) }
     var showMeteor by remember { mutableStateOf(false) }
     val meteorProgress = remember { Animatable(0f) }
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        editingPhotoUri = uri?.toString()
+    }
 
     val filteredTasks = tasks.mapIndexedNotNull { index, task ->
         val include = when (selectedFilter) {
@@ -225,6 +239,31 @@ fun TaskListScreen(
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
+                                if (task.photoUri != null && editingIndex != index) {
+                                    AsyncImage(
+                                        model = task.photoUri,
+                                        contentDescription = "Photo de la tache",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(96.dp),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(96.dp)
+                                            .background(
+                                                Brush.verticalGradient(
+                                                    colors = listOf(
+                                                        Color(0x55000000),
+                                                        Color(0x22000000),
+                                                        Color(0x00000000)
+                                                    )
+                                                )
+                                            )
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
@@ -238,9 +277,30 @@ fun TaskListScreen(
                                         color = taskTextColor
                                     )
                                     if (compactMode && editingIndex != index) {
-                                        TextButton(onClick = { expandedTasks[index] = !isExpanded }) {
-                                            Text(if (isExpanded) "Masquer" else "Details")
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            AssistChip(
+                                                onClick = {},
+                                                enabled = false,
+                                                label = { Text(if (task.isDone) "Faite" else "A faire") },
+                                                colors = AssistChipDefaults.assistChipColors(
+                                                    disabledContainerColor = if (task.isDone) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.tertiaryContainer,
+                                                    disabledLabelColor = if (task.isDone) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onTertiaryContainer
+                                                )
+                                            )
+                                            TextButton(onClick = { expandedTasks[index] = !isExpanded }) {
+                                                Text(if (isExpanded) "Masquer" else "Details")
+                                            }
                                         }
+                                    } else {
+                                        AssistChip(
+                                            onClick = {},
+                                            enabled = false,
+                                            label = { Text(if (task.isDone) "Faite" else "A faire") },
+                                            colors = AssistChipDefaults.assistChipColors(
+                                                disabledContainerColor = if (task.isDone) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.tertiaryContainer,
+                                                disabledLabelColor = if (task.isDone) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onTertiaryContainer
+                                            )
+                                        )
                                     }
                                 }
                                 Text(
@@ -266,6 +326,15 @@ fun TaskListScreen(
                                     )
                                 }
 
+                                if (task.description.isNotBlank()) {
+                                    Text(
+                                        text = task.description,
+                                        maxLines = if (compactMode && !isExpanded) 1 else 3,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = taskTextColor.copy(alpha = 0.92f)
+                                    )
+                                }
+
                                 Spacer(modifier = Modifier.height(8.dp))
 
                                 if (editingIndex == index) {
@@ -278,6 +347,36 @@ fun TaskListScreen(
                                         singleLine = true,
                                         label = { Text("Modifier la tache") }
                                     )
+                                    OutlinedTextField(
+                                        value = editingDescription,
+                                        onValueChange = { editingDescription = it },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        label = { Text("Description") },
+                                        minLines = 3,
+                                        maxLines = 5
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        AssistChip(
+                                            onClick = { photoPickerLauncher.launch("image/*") },
+                                            label = { Text(if (editingPhotoUri == null) "Joindre photo" else "Changer photo") }
+                                        )
+                                        if (editingPhotoUri != null) {
+                                            AssistChip(
+                                                onClick = { editingPhotoUri = null },
+                                                label = { Text("Retirer") }
+                                            )
+                                        }
+                                    }
+                                    if (editingPhotoUri != null) {
+                                        AsyncImage(
+                                            model = editingPhotoUri,
+                                            contentDescription = "Photo de la tache",
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(140.dp),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
 
                                     Text(
                                         text = "Echeance: ${editingDateTime.format(formatter)}",
@@ -401,9 +500,20 @@ fun TaskListScreen(
                                         ElevatedButton(onClick = {
                                             val updated = editingValue.trim()
                                             if (updated.isNotEmpty()) {
-                                                onUpdateTask(index, updated, editingDueAtMillis, editingRecurrence, editingRecurrenceInterval, editingPriority)
+                                                onUpdateTask(
+                                                    index,
+                                                    updated,
+                                                    editingDescription.trim(),
+                                                    editingPhotoUri,
+                                                    editingDueAtMillis,
+                                                    editingRecurrence,
+                                                    editingRecurrenceInterval,
+                                                    editingPriority
+                                                )
                                                 editingIndex = null
                                                 editingValue = ""
+                                                editingDescription = ""
+                                                editingPhotoUri = null
                                             }
                                         }, colors = ButtonDefaults.elevatedButtonColors(
                                             containerColor = MaterialTheme.colorScheme.primary,
@@ -415,6 +525,8 @@ fun TaskListScreen(
                                         OutlinedButton(onClick = {
                                             editingIndex = null
                                             editingValue = ""
+                                            editingDescription = ""
+                                            editingPhotoUri = null
                                         }) {
                                             Text("Annuler")
                                         }
@@ -424,6 +536,8 @@ fun TaskListScreen(
                                         OutlinedButton(onClick = {
                                             editingIndex = index
                                             editingValue = task.title
+                                            editingDescription = task.description
+                                            editingPhotoUri = task.photoUri
                                             editingDueAtMillis = task.dueAtMillis
                                             editingRecurrence = task.recurrence
                                             editingRecurrenceInterval = task.recurrenceInterval
@@ -470,6 +584,7 @@ fun TaskListScreen(
                                         color = taskTextColor.copy(alpha = 0.85f)
                                     )
                                 }
+                            }
                             }
                         }
                     }
@@ -591,8 +706,6 @@ fun TaskListScreen(
             }
         }
     }
-}
-
 @Composable
 private fun RecurrenceButton(
     label: String,
