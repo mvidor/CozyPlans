@@ -40,6 +40,9 @@ fun CozyPlansApp() {
     var newTaskRecurrence by remember { mutableStateOf(TaskRecurrence.NONE) }
     var newTaskRecurrenceInterval by remember { mutableStateOf(1) }
     var newTaskPriority by remember { mutableStateOf(TaskPriority.MEDIUM) }
+    var rewardPoints by remember { mutableStateOf(0) }
+    var completedTasksCount by remember { mutableStateOf(0) }
+    var lastRewardMessage by remember { mutableStateOf("Termine une tache pour gagner des points") }
     val tasks = remember { mutableStateListOf<Task>() }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -122,6 +125,9 @@ fun CozyPlansApp() {
 
                         AppPage.LIST -> TaskListScreen(
                             tasks = tasks,
+                            rewardPoints = rewardPoints,
+                            completedTasksCount = completedTasksCount,
+                            lastRewardMessage = lastRewardMessage,
                             onUpdateTask = { index, updatedTitle, updatedDueAtMillis, updatedRecurrence, updatedRecurrenceInterval, updatedPriority ->
                                 tasks[index] = tasks[index].copy(
                                     title = updatedTitle,
@@ -135,6 +141,17 @@ fun CozyPlansApp() {
                                 val task = tasks[index]
                                 val willBeDone = !task.isDone
                                 tasks[index] = task.copy(isDone = willBeDone)
+                                val rewardValue = rewardForTask(task)
+
+                                if (willBeDone) {
+                                    rewardPoints += rewardValue
+                                    completedTasksCount += 1
+                                    lastRewardMessage = "+$rewardValue points: ${task.title}"
+                                } else {
+                                    rewardPoints = (rewardPoints - rewardValue).coerceAtLeast(0)
+                                    completedTasksCount = (completedTasksCount - 1).coerceAtLeast(0)
+                                    lastRewardMessage = "-$rewardValue points: ${task.title}"
+                                }
 
                                 if (willBeDone && task.recurrence != TaskRecurrence.NONE) {
                                     val zoneId = ZoneId.systemDefault()
@@ -174,6 +191,17 @@ fun CozyPlansApp() {
             }
         }
     }
+}
+
+private fun rewardForTask(task: Task): Int {
+    val base = when (task.priority) {
+        TaskPriority.HIGH -> 30
+        TaskPriority.MEDIUM -> 20
+        TaskPriority.LOW -> 10
+    }
+    val recurrenceBonus = if (task.recurrence != TaskRecurrence.NONE) 4 else 0
+    val onTimeBonus = if (task.dueAtMillis >= System.currentTimeMillis()) 6 else 0
+    return base + recurrenceBonus + onTimeBonus
 }
 
 @Preview(showBackground = true)
