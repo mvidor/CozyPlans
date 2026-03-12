@@ -2,13 +2,23 @@ package com.matteo.cozyplans.ui.screens
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -44,61 +54,93 @@ fun CreateTaskScreen(
     val zoneId = ZoneId.systemDefault()
     val selectedDateTime = Instant.ofEpochMilli(dueAtMillis).atZone(zoneId).toLocalDateTime()
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
         Text(
-            text = "Creer une nouvelle tache",
+            text = "Nouvelle tache",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
 
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Nom de la tache") },
-            singleLine = true
-        )
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Nom de la tache") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp)
+                )
 
-        Text(
-            text = "Echeance: ${selectedDateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))}",
-            style = MaterialTheme.typography.bodyMedium
-        )
+                Text(
+                    text = "Echeance: ${selectedDateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = {
-                DatePickerDialog(
-                    context,
-                    { _, year, month, dayOfMonth ->
-                        val updated = LocalDateTime.of(
-                            LocalDate.of(year, month + 1, dayOfMonth),
-                            selectedDateTime.toLocalTime()
-                        )
-                        onDueAtChange(updated.atZone(zoneId).toInstant().toEpochMilli())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(
+                        onClick = {
+                        DatePickerDialog(
+                            context,
+                            { _, year, month, dayOfMonth ->
+                                val updated = LocalDateTime.of(
+                                    LocalDate.of(year, month + 1, dayOfMonth),
+                                    selectedDateTime.toLocalTime()
+                                )
+                                onDueAtChange(updated.atZone(zoneId).toInstant().toEpochMilli())
+                            },
+                            selectedDateTime.year,
+                            selectedDateTime.monthValue - 1,
+                            selectedDateTime.dayOfMonth
+                        ).show()
                     },
-                    selectedDateTime.year,
-                    selectedDateTime.monthValue - 1,
-                    selectedDateTime.dayOfMonth
-                ).show()
-            }) {
-                Text("Choisir date")
-            }
-
-            Button(onClick = {
-                TimePickerDialog(
-                    context,
-                    { _, hourOfDay, minute ->
-                        val updated = LocalDateTime.of(
-                            selectedDateTime.toLocalDate(),
-                            LocalTime.of(hourOfDay, minute)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                         )
-                        onDueAtChange(updated.atZone(zoneId).toInstant().toEpochMilli())
+                    ) {
+                        Text("Date")
+                    }
+
+                    FilledTonalButton(
+                        onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hourOfDay, minute ->
+                                val updated = LocalDateTime.of(
+                                    selectedDateTime.toLocalDate(),
+                                    LocalTime.of(hourOfDay, minute)
+                                )
+                                onDueAtChange(updated.atZone(zoneId).toInstant().toEpochMilli())
+                            },
+                            selectedDateTime.hour,
+                            selectedDateTime.minute,
+                            true
+                        ).show()
                     },
-                    selectedDateTime.hour,
-                    selectedDateTime.minute,
-                    true
-                ).show()
-            }) {
-                Text("Choisir heure")
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    ) {
+                        Text("Heure")
+                    }
+                }
             }
         }
 
@@ -106,23 +148,26 @@ fun CreateTaskScreen(
             text = "Periodicite: ${recurrenceLabel(recurrence, recurrenceInterval)}",
             style = MaterialTheme.typography.bodyMedium
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RecurrenceButton(
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.horizontalScroll(rememberScrollState())
+        ) {
+            RecurrenceChip(
                 label = "Aucune",
                 selected = recurrence == TaskRecurrence.NONE,
                 onClick = { onRecurrenceChange(TaskRecurrence.NONE) }
             )
-            RecurrenceButton(
+            RecurrenceChip(
                 label = "Jour",
                 selected = recurrence == TaskRecurrence.DAILY,
                 onClick = { onRecurrenceChange(TaskRecurrence.DAILY) }
             )
-            RecurrenceButton(
+            RecurrenceChip(
                 label = "Semaine",
                 selected = recurrence == TaskRecurrence.WEEKLY,
                 onClick = { onRecurrenceChange(TaskRecurrence.WEEKLY) }
             )
-            RecurrenceButton(
+            RecurrenceChip(
                 label = "Mois",
                 selected = recurrence == TaskRecurrence.MONTHLY,
                 onClick = { onRecurrenceChange(TaskRecurrence.MONTHLY) }
@@ -131,9 +176,12 @@ fun CreateTaskScreen(
 
         if (recurrence != TaskRecurrence.NONE) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = {
+                FilledTonalButton(onClick = {
                     onRecurrenceIntervalChange((recurrenceInterval - 1).coerceAtLeast(1))
-                }) {
+                }, colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                )) {
                     Text("-")
                 }
                 Text(
@@ -141,9 +189,12 @@ fun CreateTaskScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.width(100.dp)
                 )
-                Button(onClick = {
+                FilledTonalButton(onClick = {
                     onRecurrenceIntervalChange((recurrenceInterval + 1).coerceAtMost(30))
-                }) {
+                }, colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                )) {
                     Text("+")
                 }
             }
@@ -159,16 +210,72 @@ fun CreateTaskScreen(
             }",
             style = MaterialTheme.typography.bodyMedium
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { onPriorityChange(TaskPriority.HIGH) }) { Text("Haute") }
-            Button(onClick = { onPriorityChange(TaskPriority.MEDIUM) }) { Text("Moy.") }
-            Button(onClick = { onPriorityChange(TaskPriority.LOW) }) { Text("Basse") }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.horizontalScroll(rememberScrollState())
+        ) {
+            PriorityChip(
+                label = "Haute",
+                selected = priority == TaskPriority.HIGH,
+                onClick = { onPriorityChange(TaskPriority.HIGH) }
+            )
+            PriorityChip(
+                label = "Moyenne",
+                selected = priority == TaskPriority.MEDIUM,
+                onClick = { onPriorityChange(TaskPriority.MEDIUM) }
+            )
+            PriorityChip(
+                label = "Basse",
+                selected = priority == TaskPriority.LOW,
+                onClick = { onPriorityChange(TaskPriority.LOW) }
+            )
         }
 
-        Button(onClick = onAddTask) {
+        ElevatedButton(
+            onClick = onAddTask,
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.elevatedButtonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
             Text("Ajouter la tache")
         }
     }
+}
+
+@Composable
+private fun RecurrenceChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    )
+}
+
+@Composable
+private fun PriorityChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+    )
 }
 
 @Composable
@@ -177,12 +284,12 @@ private fun RecurrenceButton(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    Button(
+    ElevatedButton(
         onClick = onClick,
         colors = if (selected) {
-            ButtonDefaults.buttonColors()
+            ButtonDefaults.elevatedButtonColors()
         } else {
-            ButtonDefaults.outlinedButtonColors()
+            ButtonDefaults.filledTonalButtonColors()
         }
     ) {
         Text(label)

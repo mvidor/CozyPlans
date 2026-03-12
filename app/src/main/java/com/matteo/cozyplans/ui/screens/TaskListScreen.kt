@@ -6,6 +6,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,19 +17,27 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -63,9 +73,6 @@ private enum class TaskFilter {
 @Composable
 fun TaskListScreen(
     tasks: List<Task>,
-    rewardPoints: Int,
-    completedTasksCount: Int,
-    lastRewardMessage: String,
     onUpdateTask: (index: Int, updatedTitle: String, updatedDueAtMillis: Long, updatedRecurrence: TaskRecurrence, updatedRecurrenceInterval: Int, updatedPriority: TaskPriority) -> Unit,
     onToggleTaskDone: (index: Int) -> Unit,
     onPurgeCompleted: () -> Unit
@@ -81,6 +88,8 @@ fun TaskListScreen(
     var editingRecurrenceInterval by remember { mutableIntStateOf(1) }
     var editingPriority by remember { mutableStateOf(TaskPriority.MEDIUM) }
     var selectedFilter by remember { mutableStateOf(TaskFilter.ALL) }
+    var compactMode by remember { mutableStateOf(true) }
+    val expandedTasks = remember { mutableStateMapOf<Int, Boolean>() }
     var meteorTrigger by remember { mutableIntStateOf(0) }
     var showMeteor by remember { mutableStateOf(false) }
     val meteorProgress = remember { Animatable(0f) }
@@ -107,8 +116,6 @@ fun TaskListScreen(
     val completedCount = tasks.count { it.isDone }
     val nowMillis = System.currentTimeMillis()
     val overdueCount = tasks.count { !it.isDone && it.dueAtMillis < nowMillis }
-    val rewardLevel = (rewardPoints / 100) + 1
-    val pointsInCurrentLevel = rewardPoints % 100
 
     LaunchedEffect(meteorTrigger) {
         if (meteorTrigger > 0) {
@@ -123,45 +130,19 @@ fun TaskListScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Text(
                 text = "Lister toutes les taches",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Recompenses",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "Niveau $rewardLevel  |  $rewardPoints points",
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "Progression: $pointsInCurrentLevel/100",
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "Taches validees: $completedTasksCount",
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = lastRewardMessage,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
 
             if (overdueCount > 0) {
                 Card(
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     )
@@ -176,12 +157,41 @@ fun TaskListScreen(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { selectedFilter = TaskFilter.ALL }) { Text("Toutes") }
-                Button(onClick = { selectedFilter = TaskFilter.TODO }) { Text("A faire") }
-                Button(onClick = { selectedFilter = TaskFilter.DONE }) { Text("Realisees") }
+                FilterChip(
+                    selected = selectedFilter == TaskFilter.ALL,
+                    onClick = { selectedFilter = TaskFilter.ALL },
+                    label = { Text("Toutes") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
+                FilterChip(
+                    selected = selectedFilter == TaskFilter.TODO,
+                    onClick = { selectedFilter = TaskFilter.TODO },
+                    label = { Text("A faire") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
+                FilterChip(
+                    selected = selectedFilter == TaskFilter.DONE,
+                    onClick = { selectedFilter = TaskFilter.DONE },
+                    label = { Text("Realisees") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
+                FilterChip(
+                    selected = compactMode,
+                    onClick = { compactMode = !compactMode },
+                    label = { Text(if (compactMode) "Compact" else "Detaille") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                )
             }
             if (completedCount > 0) {
-                Button(onClick = onPurgeCompleted) {
+                OutlinedButton(onClick = onPurgeCompleted) {
                     Text("Effacer les taches effectuees ($completedCount)")
                 }
             }
@@ -194,10 +204,15 @@ fun TaskListScreen(
                 }
                 Text(emptyMessage)
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 48.dp)
+                ) {
                     itemsIndexed(filteredTasks) { _, item ->
                         val index = item.first
                         val task = item.second
+                        val isExpanded = expandedTasks[index] ?: false
                         val isOverdue = !task.isDone && task.dueAtMillis < nowMillis
                         val taskCardColor = if (task.isDone) Color(0xFF1E3A8A) else MaterialTheme.colorScheme.surface
                         val taskTextColor = if (task.isDone) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
@@ -205,15 +220,29 @@ fun TaskListScreen(
 
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = taskCardColor)
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = taskCardColor),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = "${index + 1}. ${task.title}",
+                                Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
-                                    color = taskTextColor
-                                )
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "${index + 1}. ${task.title}",
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
+                                        color = taskTextColor
+                                    )
+                                    if (compactMode && editingIndex != index) {
+                                        TextButton(onClick = { expandedTasks[index] = !isExpanded }) {
+                                            Text(if (isExpanded) "Masquer" else "Details")
+                                        }
+                                    }
+                                }
                                 Text(
                                     text = when (task.priority) {
                                         TaskPriority.HIGH -> "Priorite: Haute"
@@ -256,7 +285,7 @@ fun TaskListScreen(
                                     )
 
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Button(onClick = {
+                                        FilledTonalButton(onClick = {
                                             DatePickerDialog(
                                                 context,
                                                 { _, year, month, dayOfMonth ->
@@ -274,7 +303,7 @@ fun TaskListScreen(
                                             Text("Date")
                                         }
 
-                                        Button(onClick = {
+                                        FilledTonalButton(onClick = {
                                             TimePickerDialog(
                                                 context,
                                                 { _, hourOfDay, minute ->
@@ -321,7 +350,7 @@ fun TaskListScreen(
                                     }
                                     if (editingRecurrence != TaskRecurrence.NONE) {
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Button(onClick = {
+                                            FilledTonalButton(onClick = {
                                                 editingRecurrenceInterval = (editingRecurrenceInterval - 1).coerceAtLeast(1)
                                             }) {
                                                 Text("-")
@@ -331,7 +360,7 @@ fun TaskListScreen(
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 modifier = Modifier.width(100.dp)
                                             )
-                                            Button(onClick = {
+                                            FilledTonalButton(onClick = {
                                                 editingRecurrenceInterval = (editingRecurrenceInterval + 1).coerceAtMost(30)
                                             }) {
                                                 Text("+")
@@ -349,26 +378,41 @@ fun TaskListScreen(
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Button(onClick = { editingPriority = TaskPriority.HIGH }) { Text("Haute") }
-                                        Button(onClick = { editingPriority = TaskPriority.MEDIUM }) { Text("Moy.") }
-                                        Button(onClick = { editingPriority = TaskPriority.LOW }) { Text("Basse") }
+                                        FilterChip(
+                                            selected = editingPriority == TaskPriority.HIGH,
+                                            onClick = { editingPriority = TaskPriority.HIGH },
+                                            label = { Text("Haute") }
+                                        )
+                                        FilterChip(
+                                            selected = editingPriority == TaskPriority.MEDIUM,
+                                            onClick = { editingPriority = TaskPriority.MEDIUM },
+                                            label = { Text("Moyenne") }
+                                        )
+                                        FilterChip(
+                                            selected = editingPriority == TaskPriority.LOW,
+                                            onClick = { editingPriority = TaskPriority.LOW },
+                                            label = { Text("Basse") }
+                                        )
                                     }
 
                                     Spacer(modifier = Modifier.height(8.dp))
 
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Button(onClick = {
+                                        ElevatedButton(onClick = {
                                             val updated = editingValue.trim()
                                             if (updated.isNotEmpty()) {
                                                 onUpdateTask(index, updated, editingDueAtMillis, editingRecurrence, editingRecurrenceInterval, editingPriority)
                                                 editingIndex = null
                                                 editingValue = ""
                                             }
-                                        }) {
+                                        }, colors = ButtonDefaults.elevatedButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary
+                                        )) {
                                             Text("Enregistrer")
                                         }
 
-                                        Button(onClick = {
+                                        OutlinedButton(onClick = {
                                             editingIndex = null
                                             editingValue = ""
                                         }) {
@@ -377,7 +421,7 @@ fun TaskListScreen(
                                     }
                                 } else {
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Button(onClick = {
+                                        OutlinedButton(onClick = {
                                             editingIndex = index
                                             editingValue = task.title
                                             editingDueAtMillis = task.dueAtMillis
@@ -388,31 +432,44 @@ fun TaskListScreen(
                                             Text("Modifier")
                                         }
 
-                                        Button(onClick = {
+                                        ElevatedButton(onClick = {
                                             val wasDone = task.isDone
                                             onToggleTaskDone(index)
                                             if (!wasDone) {
                                                 meteorTrigger += 1
                                             }
-                                        }) {
+                                        }, colors = ButtonDefaults.elevatedButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary
+                                        )) {
                                             Text(if (task.isDone) "Annuler realisee" else "Marquer realisee")
                                         }
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Pour le ${taskDueDateTime.format(formatter)}",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.End,
-                                    color = taskTextColor
-                                )
-                                Text(
-                                    text = "Periodicite: ${recurrenceLabel(task.recurrence, task.recurrenceInterval).lowercase()}",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    textAlign = TextAlign.End,
-                                    color = taskTextColor
-                                )
+                                if (!compactMode || isExpanded || editingIndex == index) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Pour le ${taskDueDateTime.format(formatter)}",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.End,
+                                        color = taskTextColor
+                                    )
+                                    Text(
+                                        text = "Periodicite: ${recurrenceLabel(task.recurrence, task.recurrenceInterval).lowercase()}",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.End,
+                                        color = taskTextColor
+                                    )
+                                } else {
+                                    Text(
+                                        text = "${taskDueDateTime.format(formatter)} - ${recurrenceLabel(task.recurrence, task.recurrenceInterval).lowercase()}",
+                                        modifier = Modifier.fillMaxWidth(),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = taskTextColor.copy(alpha = 0.85f)
+                                    )
+                                }
                             }
                         }
                     }
@@ -545,9 +602,14 @@ private fun RecurrenceButton(
     Button(
         onClick = onClick,
         colors = if (selected) {
-            ButtonDefaults.buttonColors()
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         } else {
-            ButtonDefaults.outlinedButtonColors()
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary
+            )
         }
     ) {
         Text(label)
