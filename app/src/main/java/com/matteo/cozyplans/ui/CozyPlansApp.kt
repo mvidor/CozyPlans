@@ -273,6 +273,9 @@ fun CozyPlansApp() {
                                                 )
                                             }
                                         },
+                                        onDeleteTask = { index ->
+                                            tasks.removeAt(index)
+                                        },
                                         onPurgeCompleted = {
                                             tasks.removeAll { it.isDone }
                                         }

@@ -83,6 +83,7 @@ fun TaskListScreen(
     tasks: List<Task>,
     onUpdateTask: (index: Int, updatedTitle: String, updatedDescription: String, updatedPhotoUri: String?, updatedDueAtMillis: Long, updatedRecurrence: TaskRecurrence, updatedRecurrenceInterval: Int, updatedPriority: TaskPriority) -> Unit,
     onToggleTaskDone: (index: Int) -> Unit,
+    onDeleteTask: (index: Int) -> Unit,
     onPurgeCompleted: () -> Unit
 ) {
     val context = LocalContext.current
@@ -568,6 +569,10 @@ fun TaskListScreen(
                                             contentColor = MaterialTheme.colorScheme.onPrimary
                                         )) {
                                             Text(if (task.isDone) "Annuler realisee" else "Marquer realisee")
+                                        }
+
+                                        TextButton(onClick = { onDeleteTask(index) }) {
+                                            Text("X")
                                         }
                                     }
                                 }
