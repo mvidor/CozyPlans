@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -15,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.matteo.cozyplans.model.TaskPriority
 import com.matteo.cozyplans.model.TaskRecurrence
 import java.time.Instant
 import java.time.LocalDate
@@ -31,6 +34,10 @@ fun CreateTaskScreen(
     onDueAtChange: (Long) -> Unit,
     recurrence: TaskRecurrence,
     onRecurrenceChange: (TaskRecurrence) -> Unit,
+    recurrenceInterval: Int,
+    onRecurrenceIntervalChange: (Int) -> Unit,
+    priority: TaskPriority,
+    onPriorityChange: (TaskPriority) -> Unit,
     onAddTask: () -> Unit
 ) {
     val context = LocalContext.current
@@ -96,25 +103,101 @@ fun CreateTaskScreen(
         }
 
         Text(
-            text = "Periodicite: ${
-                when (recurrence) {
-                    TaskRecurrence.NONE -> "Aucune"
-                    TaskRecurrence.DAILY -> "Quotidienne"
-                    TaskRecurrence.WEEKLY -> "Hebdomadaire"
-                    TaskRecurrence.MONTHLY -> "Mensuelle"
+            text = "Periodicite: ${recurrenceLabel(recurrence, recurrenceInterval)}",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RecurrenceButton(
+                label = "Aucune",
+                selected = recurrence == TaskRecurrence.NONE,
+                onClick = { onRecurrenceChange(TaskRecurrence.NONE) }
+            )
+            RecurrenceButton(
+                label = "Jour",
+                selected = recurrence == TaskRecurrence.DAILY,
+                onClick = { onRecurrenceChange(TaskRecurrence.DAILY) }
+            )
+            RecurrenceButton(
+                label = "Semaine",
+                selected = recurrence == TaskRecurrence.WEEKLY,
+                onClick = { onRecurrenceChange(TaskRecurrence.WEEKLY) }
+            )
+            RecurrenceButton(
+                label = "Mois",
+                selected = recurrence == TaskRecurrence.MONTHLY,
+                onClick = { onRecurrenceChange(TaskRecurrence.MONTHLY) }
+            )
+        }
+
+        if (recurrence != TaskRecurrence.NONE) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = {
+                    onRecurrenceIntervalChange((recurrenceInterval - 1).coerceAtLeast(1))
+                }) {
+                    Text("-")
+                }
+                Text(
+                    text = "Tous les $recurrenceInterval",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.width(100.dp)
+                )
+                Button(onClick = {
+                    onRecurrenceIntervalChange((recurrenceInterval + 1).coerceAtMost(30))
+                }) {
+                    Text("+")
+                }
+            }
+        }
+
+        Text(
+            text = "Priorite: ${
+                when (priority) {
+                    TaskPriority.HIGH -> "Haute"
+                    TaskPriority.MEDIUM -> "Moyenne"
+                    TaskPriority.LOW -> "Basse"
                 }
             }",
             style = MaterialTheme.typography.bodyMedium
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { onRecurrenceChange(TaskRecurrence.NONE) }) { Text("Aucune") }
-            Button(onClick = { onRecurrenceChange(TaskRecurrence.DAILY) }) { Text("Quot.") }
-            Button(onClick = { onRecurrenceChange(TaskRecurrence.WEEKLY) }) { Text("Hebdo") }
-            Button(onClick = { onRecurrenceChange(TaskRecurrence.MONTHLY) }) { Text("Mens.") }
+            Button(onClick = { onPriorityChange(TaskPriority.HIGH) }) { Text("Haute") }
+            Button(onClick = { onPriorityChange(TaskPriority.MEDIUM) }) { Text("Moy.") }
+            Button(onClick = { onPriorityChange(TaskPriority.LOW) }) { Text("Basse") }
         }
 
         Button(onClick = onAddTask) {
             Text("Ajouter la tache")
         }
+    }
+}
+
+@Composable
+private fun RecurrenceButton(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        colors = if (selected) {
+            ButtonDefaults.buttonColors()
+        } else {
+            ButtonDefaults.outlinedButtonColors()
+        }
+    ) {
+        Text(label)
+    }
+}
+
+private fun recurrenceLabel(
+    recurrence: TaskRecurrence,
+    interval: Int
+): String {
+    val safeInterval = interval.coerceAtLeast(1)
+    return when (recurrence) {
+        TaskRecurrence.NONE -> "Aucune"
+        TaskRecurrence.DAILY -> if (safeInterval == 1) "Tous les jours" else "Tous les $safeInterval jours"
+        TaskRecurrence.WEEKLY -> if (safeInterval == 1) "Toutes les semaines" else "Toutes les $safeInterval semaines"
+        TaskRecurrence.MONTHLY -> if (safeInterval == 1) "Tous les mois" else "Tous les $safeInterval mois"
     }
 }

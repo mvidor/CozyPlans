@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.matteo.cozyplans.model.Task
+import com.matteo.cozyplans.model.TaskPriority
 import com.matteo.cozyplans.model.TaskRecurrence
 import java.time.Instant
 import java.time.LocalDate
@@ -60,7 +63,7 @@ private enum class TaskFilter {
 @Composable
 fun TaskListScreen(
     tasks: List<Task>,
-    onUpdateTask: (index: Int, updatedTitle: String, updatedDueAtMillis: Long, updatedRecurrence: TaskRecurrence) -> Unit,
+    onUpdateTask: (index: Int, updatedTitle: String, updatedDueAtMillis: Long, updatedRecurrence: TaskRecurrence, updatedRecurrenceInterval: Int, updatedPriority: TaskPriority) -> Unit,
     onToggleTaskDone: (index: Int) -> Unit,
     onPurgeCompleted: () -> Unit
 ) {
@@ -72,6 +75,8 @@ fun TaskListScreen(
     var editingValue by remember { mutableStateOf("") }
     var editingDueAtMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     var editingRecurrence by remember { mutableStateOf(TaskRecurrence.NONE) }
+    var editingRecurrenceInterval by remember { mutableIntStateOf(1) }
+    var editingPriority by remember { mutableStateOf(TaskPriority.MEDIUM) }
     var selectedFilter by remember { mutableStateOf(TaskFilter.ALL) }
     var meteorTrigger by remember { mutableIntStateOf(0) }
     var showMeteor by remember { mutableStateOf(false) }
@@ -84,7 +89,18 @@ fun TaskListScreen(
             TaskFilter.DONE -> task.isDone
         }
         if (include) index to task else null
-    }
+    }.sortedWith(
+        compareBy<Pair<Int, Task>>(
+            { pair ->
+                when (pair.second.priority) {
+                    TaskPriority.HIGH -> 0
+                    TaskPriority.MEDIUM -> 1
+                    TaskPriority.LOW -> 2
+                }
+            },
+            { it.second.dueAtMillis }
+        )
+    )
     val completedCount = tasks.count { it.isDone }
     val nowMillis = System.currentTimeMillis()
     val overdueCount = tasks.count { !it.isDone && it.dueAtMillis < nowMillis }
@@ -163,6 +179,19 @@ fun TaskListScreen(
                                     textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
                                     color = taskTextColor
                                 )
+                                Text(
+                                    text = when (task.priority) {
+                                        TaskPriority.HIGH -> "Priorite: Haute"
+                                        TaskPriority.MEDIUM -> "Priorite: Moyenne"
+                                        TaskPriority.LOW -> "Priorite: Basse"
+                                    },
+                                    color = when (task.priority) {
+                                        TaskPriority.HIGH -> Color(0xFFD81B60)
+                                        TaskPriority.MEDIUM -> taskTextColor
+                                        TaskPriority.LOW -> Color(0xFF43A047)
+                                    },
+                                    fontWeight = FontWeight.SemiBold
+                                )
 
                                 if (isOverdue) {
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -230,21 +259,64 @@ fun TaskListScreen(
                                     }
 
                                     Text(
-                                        text = "Periodicite: ${
-                                            when (editingRecurrence) {
-                                                TaskRecurrence.NONE -> "Aucune"
-                                                TaskRecurrence.DAILY -> "Quotidienne"
-                                                TaskRecurrence.WEEKLY -> "Hebdomadaire"
-                                                TaskRecurrence.MONTHLY -> "Mensuelle"
+                                        text = "Periodicite: ${recurrenceLabel(editingRecurrence, editingRecurrenceInterval)}",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        RecurrenceButton(
+                                            label = "Aucune",
+                                            selected = editingRecurrence == TaskRecurrence.NONE,
+                                            onClick = { editingRecurrence = TaskRecurrence.NONE }
+                                        )
+                                        RecurrenceButton(
+                                            label = "Jour",
+                                            selected = editingRecurrence == TaskRecurrence.DAILY,
+                                            onClick = { editingRecurrence = TaskRecurrence.DAILY }
+                                        )
+                                        RecurrenceButton(
+                                            label = "Semaine",
+                                            selected = editingRecurrence == TaskRecurrence.WEEKLY,
+                                            onClick = { editingRecurrence = TaskRecurrence.WEEKLY }
+                                        )
+                                        RecurrenceButton(
+                                            label = "Mois",
+                                            selected = editingRecurrence == TaskRecurrence.MONTHLY,
+                                            onClick = { editingRecurrence = TaskRecurrence.MONTHLY }
+                                        )
+                                    }
+                                    if (editingRecurrence != TaskRecurrence.NONE) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Button(onClick = {
+                                                editingRecurrenceInterval = (editingRecurrenceInterval - 1).coerceAtLeast(1)
+                                            }) {
+                                                Text("-")
+                                            }
+                                            Text(
+                                                text = "Tous les $editingRecurrenceInterval",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                modifier = Modifier.width(100.dp)
+                                            )
+                                            Button(onClick = {
+                                                editingRecurrenceInterval = (editingRecurrenceInterval + 1).coerceAtMost(30)
+                                            }) {
+                                                Text("+")
+                                            }
+                                        }
+                                    }
+                                    Text(
+                                        text = "Priorite: ${
+                                            when (editingPriority) {
+                                                TaskPriority.HIGH -> "Haute"
+                                                TaskPriority.MEDIUM -> "Moyenne"
+                                                TaskPriority.LOW -> "Basse"
                                             }
                                         }",
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Button(onClick = { editingRecurrence = TaskRecurrence.NONE }) { Text("Aucune") }
-                                        Button(onClick = { editingRecurrence = TaskRecurrence.DAILY }) { Text("Quot.") }
-                                        Button(onClick = { editingRecurrence = TaskRecurrence.WEEKLY }) { Text("Hebdo") }
-                                        Button(onClick = { editingRecurrence = TaskRecurrence.MONTHLY }) { Text("Mens.") }
+                                        Button(onClick = { editingPriority = TaskPriority.HIGH }) { Text("Haute") }
+                                        Button(onClick = { editingPriority = TaskPriority.MEDIUM }) { Text("Moy.") }
+                                        Button(onClick = { editingPriority = TaskPriority.LOW }) { Text("Basse") }
                                     }
 
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -253,7 +325,7 @@ fun TaskListScreen(
                                         Button(onClick = {
                                             val updated = editingValue.trim()
                                             if (updated.isNotEmpty()) {
-                                                onUpdateTask(index, updated, editingDueAtMillis, editingRecurrence)
+                                                onUpdateTask(index, updated, editingDueAtMillis, editingRecurrence, editingRecurrenceInterval, editingPriority)
                                                 editingIndex = null
                                                 editingValue = ""
                                             }
@@ -275,6 +347,8 @@ fun TaskListScreen(
                                             editingValue = task.title
                                             editingDueAtMillis = task.dueAtMillis
                                             editingRecurrence = task.recurrence
+                                            editingRecurrenceInterval = task.recurrenceInterval
+                                            editingPriority = task.priority
                                         }) {
                                             Text("Modifier")
                                         }
@@ -299,12 +373,7 @@ fun TaskListScreen(
                                     color = taskTextColor
                                 )
                                 Text(
-                                    text = when (task.recurrence) {
-                                        TaskRecurrence.NONE -> "Periodicite: aucune"
-                                        TaskRecurrence.DAILY -> "Periodicite: quotidienne"
-                                        TaskRecurrence.WEEKLY -> "Periodicite: hebdomadaire"
-                                        TaskRecurrence.MONTHLY -> "Periodicite: mensuelle"
-                                    },
+                                    text = "Periodicite: ${recurrenceLabel(task.recurrence, task.recurrenceInterval).lowercase()}",
                                     modifier = Modifier.fillMaxWidth(),
                                     textAlign = TextAlign.End,
                                     color = taskTextColor
@@ -429,5 +498,36 @@ fun TaskListScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RecurrenceButton(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        colors = if (selected) {
+            ButtonDefaults.buttonColors()
+        } else {
+            ButtonDefaults.outlinedButtonColors()
+        }
+    ) {
+        Text(label)
+    }
+}
+
+private fun recurrenceLabel(
+    recurrence: TaskRecurrence,
+    interval: Int
+): String {
+    val safeInterval = interval.coerceAtLeast(1)
+    return when (recurrence) {
+        TaskRecurrence.NONE -> "Aucune"
+        TaskRecurrence.DAILY -> if (safeInterval == 1) "Tous les jours" else "Tous les $safeInterval jours"
+        TaskRecurrence.WEEKLY -> if (safeInterval == 1) "Toutes les semaines" else "Toutes les $safeInterval semaines"
+        TaskRecurrence.MONTHLY -> if (safeInterval == 1) "Tous les mois" else "Tous les $safeInterval mois"
     }
 }

@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.matteo.cozyplans.model.TaskPriority
 import com.matteo.cozyplans.model.Task
 import com.matteo.cozyplans.model.TaskRecurrence
 import com.matteo.cozyplans.ui.screens.CreateTaskScreen
@@ -37,6 +38,8 @@ fun CozyPlansApp() {
     var newTaskTitle by remember { mutableStateOf("") }
     var newTaskDueAtMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     var newTaskRecurrence by remember { mutableStateOf(TaskRecurrence.NONE) }
+    var newTaskRecurrenceInterval by remember { mutableStateOf(1) }
+    var newTaskPriority by remember { mutableStateOf(TaskPriority.MEDIUM) }
     val tasks = remember { mutableStateListOf<Task>() }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -91,6 +94,10 @@ fun CozyPlansApp() {
                             onDueAtChange = { newTaskDueAtMillis = it },
                             recurrence = newTaskRecurrence,
                             onRecurrenceChange = { newTaskRecurrence = it },
+                            recurrenceInterval = newTaskRecurrenceInterval,
+                            onRecurrenceIntervalChange = { newTaskRecurrenceInterval = it },
+                            priority = newTaskPriority,
+                            onPriorityChange = { newTaskPriority = it },
                             onAddTask = {
                                 val trimmed = newTaskTitle.trim()
                                 if (trimmed.isNotEmpty()) {
@@ -98,12 +105,16 @@ fun CozyPlansApp() {
                                         Task(
                                             title = trimmed,
                                             dueAtMillis = newTaskDueAtMillis,
-                                            recurrence = newTaskRecurrence
+                                            recurrence = newTaskRecurrence,
+                                            recurrenceInterval = newTaskRecurrenceInterval,
+                                            priority = newTaskPriority
                                         )
                                     )
                                     newTaskTitle = ""
                                     newTaskDueAtMillis = System.currentTimeMillis()
                                     newTaskRecurrence = TaskRecurrence.NONE
+                                    newTaskRecurrenceInterval = 1
+                                    newTaskPriority = TaskPriority.MEDIUM
                                     currentPage = AppPage.LIST
                                 }
                             }
@@ -111,11 +122,13 @@ fun CozyPlansApp() {
 
                         AppPage.LIST -> TaskListScreen(
                             tasks = tasks,
-                            onUpdateTask = { index, updatedTitle, updatedDueAtMillis, updatedRecurrence ->
+                            onUpdateTask = { index, updatedTitle, updatedDueAtMillis, updatedRecurrence, updatedRecurrenceInterval, updatedPriority ->
                                 tasks[index] = tasks[index].copy(
                                     title = updatedTitle,
                                     dueAtMillis = updatedDueAtMillis,
-                                    recurrence = updatedRecurrence
+                                    recurrence = updatedRecurrence,
+                                    recurrenceInterval = updatedRecurrenceInterval,
+                                    priority = updatedPriority
                                 )
                             },
                             onToggleTaskDone = { index ->
@@ -126,11 +139,21 @@ fun CozyPlansApp() {
                                 if (willBeDone && task.recurrence != TaskRecurrence.NONE) {
                                     val zoneId = ZoneId.systemDefault()
                                     val currentDue = Instant.ofEpochMilli(task.dueAtMillis).atZone(zoneId).toLocalDateTime()
-                                    val nextDue = when (task.recurrence) {
-                                        TaskRecurrence.DAILY -> currentDue.plusDays(1)
-                                        TaskRecurrence.WEEKLY -> currentDue.plusWeeks(1)
-                                        TaskRecurrence.MONTHLY -> currentDue.plusMonths(1)
+                                    val interval = task.recurrenceInterval.coerceAtLeast(1).toLong()
+                                    var nextDue = when (task.recurrence) {
+                                        TaskRecurrence.DAILY -> currentDue.plusDays(interval)
+                                        TaskRecurrence.WEEKLY -> currentDue.plusWeeks(interval)
+                                        TaskRecurrence.MONTHLY -> currentDue.plusMonths(interval)
                                         TaskRecurrence.NONE -> currentDue
+                                    }
+                                    val now = Instant.ofEpochMilli(System.currentTimeMillis()).atZone(zoneId).toLocalDateTime()
+                                    while (nextDue.isBefore(now)) {
+                                        nextDue = when (task.recurrence) {
+                                            TaskRecurrence.DAILY -> nextDue.plusDays(interval)
+                                            TaskRecurrence.WEEKLY -> nextDue.plusWeeks(interval)
+                                            TaskRecurrence.MONTHLY -> nextDue.plusMonths(interval)
+                                            TaskRecurrence.NONE -> nextDue
+                                        }
                                     }
                                     tasks.add(
                                         task.copy(
