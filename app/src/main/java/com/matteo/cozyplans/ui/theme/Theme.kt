@@ -1,51 +1,64 @@
 package com.matteo.cozyplans.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = SkyBlueDark,
+    secondary = MintDark,
+    tertiary = CoralDark,
+    background = Night,
+    surface = CardDark,
+    surfaceVariant = CardDark.copy(alpha = 0.8f),
+    primaryContainer = SkyBlueDark.copy(alpha = 0.22f),
+    secondaryContainer = MintDark.copy(alpha = 0.22f),
+    tertiaryContainer = CoralDark.copy(alpha = 0.28f),
+    onPrimary = Ink,
+    onSecondary = Ink,
+    onTertiary = Ink,
+    onPrimaryContainer = Snow,
+    onSecondaryContainer = Snow,
+    onTertiaryContainer = Ink,
+    onBackground = Snow,
+    onSurface = Snow
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = SkyBlue,
+    secondary = Mint,
+    tertiary = Coral,
+    background = Snow,
+    surface = CardLight,
+    surfaceVariant = Color(0xFFE9EEF8),
+    primaryContainer = Color(0xFFDCE8FF),
+    secondaryContainer = Color(0xFFD8F6F4),
+    tertiaryContainer = Color(0xFFFFF1CC),
+    onPrimary = CardLight,
+    onSecondary = Ink,
+    onTertiary = CardLight,
+    onPrimaryContainer = Ink,
+    onSecondaryContainer = Ink,
+    onTertiaryContainer = Ink,
+    onBackground = Ink,
+    onSurface = Ink
 )
 
 @Composable
 fun CozyPlansTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (darkTheme) DarkColorScheme else LightColorScheme
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
